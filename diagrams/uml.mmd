@@ -2,11 +2,16 @@ classDiagram
     class Owner {
         +str name
         +int available_minutes
-        +dict preferences
+        +int day_start_minute
+        +Preferences preferences
         +list~Pet~ pets
         +add_pet(pet) None
         +remove_pet(pet) None
         +get_all_tasks() list~Task~
+    }
+
+    class Preferences {
+        +int buffer_minutes
     }
 
     class Pet {
@@ -19,13 +24,22 @@ classDiagram
     }
 
     class Task {
+        +str id
         +str title
         +int duration_minutes
-        +str priority
+        +Priority priority
         +bool completed
-        +str preferred_time
+        +int preferred_time
+        +str pet_name
         +mark_complete() None
         +priority_value() int
+    }
+
+    class Priority {
+        <<enumeration>>
+        LOW
+        MEDIUM
+        HIGH
     }
 
     class Scheduler {
@@ -35,17 +49,34 @@ classDiagram
     }
 
     class DailyPlan {
-        +list scheduled_items
-        +list skipped_tasks
+        +list~ScheduledItem~ scheduled_items
+        +list~SkippedItem~ skipped_items
         +int total_minutes
-        +list~str~ reasoning
-        +add_item(task, start_time) None
+        +add_item(task, start_minute, reason) None
         +skip(task, reason) None
         +display() str
     }
 
-    Owner "1" *-- "1..*" Pet : has
+    class ScheduledItem {
+        +Task task
+        +int start_minute
+        +str reason
+        +int end_minute
+    }
+
+    class SkippedItem {
+        +Task task
+        +str reason
+    }
+
+    Owner "1" *-- "0..*" Pet : has
+    Owner *-- Preferences
     Pet "1" *-- "0..*" Task : has
+    Task --> Priority
+    Task ..> Pet : pet_name refers to
     Scheduler --> Owner : reads from
     Scheduler ..> DailyPlan : creates
-    DailyPlan o-- "0..*" Task : schedules / skips
+    DailyPlan *-- "0..*" ScheduledItem
+    DailyPlan *-- "0..*" SkippedItem
+    ScheduledItem --> Task
+    SkippedItem --> Task
