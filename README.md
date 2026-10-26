@@ -68,52 +68,31 @@ How they work together: `Owner` → `Pet` → `Task` hold the data, `Scheduler` 
 
 ## 🖥️ Sample Output
 
-Paste a sample of your app's CLI or Streamlit output here so a reader can see what a generated plan looks like:
+This is the generated plan from `python main.py` for an owner with two pets (Buddy the dog and Mia the cat) and 120 minutes available. The full demo output, including sorting, conflict warnings, and filtering, is in the Demo Walkthrough below.
 
 ```
-# e.g.:
-# Daily plan for Biscuit (Golden Retriever):
-#   08:00 — Morning walk (30 min) [priority: high]
-#   09:00 — Feeding (10 min) [priority: high]
-#   ...
-```
-
-Output from running `python main.py`, which builds an owner with two pets and four tasks and prints the generated schedule:
-
-```
-Owner: Jordan (120 minutes available)
-Pets: Buddy, Mia
-
 Today's Schedule
 ----------------
-7:00 AM - 7:30 AM  Morning walk (Buddy)
+7:00 AM - 7:10 AM  Flea treatment (Buddy)
+7:15 AM - 7:25 AM  Feed breakfast (Mia)
 8:00 AM - 8:05 AM  Give medication (Mia)
 12:00 PM - 12:20 PM  Play with laser (Mia)
 6:00 PM - 6:15 PM  Brush coat (Buddy)
-Total: 70 minutes
+Total: 60 minutes
+
+Skipped:
+- Morning walk (Buddy)
 
 Why this plan:
-- Morning walk: high priority, placed at its preferred time 7:00 AM
+- Flea treatment: medium priority, placed at its preferred time 7:00 AM
+- Feed breakfast: high priority, placed at its preferred time 7:15 AM
 - Give medication: high priority, placed at its preferred time 8:00 AM
 - Play with laser: medium priority, placed at its preferred time 12:00 PM
 - Brush coat: low priority, placed at its preferred time 6:00 PM
+- Morning walk (skipped): already completed
 ```
 
 ## 🧪 Testing PawPal+
-
-```bash
-# Run the full test suite:
-pytest
-
-# Run with coverage:
-pytest --cov
-```
-
-Sample test output:
-
-```
-# Paste your pytest output here
-```
 
 Run the tests with:
 
@@ -150,8 +129,6 @@ tests\test_pawpal.py ..........................                          [100%]
 All 26 tests pass, and they cover the main behaviors and the edge cases I could think of, including one real bug found and fixed (completing a recurring task twice). I'm not giving 5 stars because month and year rollover for recurring dates isn't tested, the Streamlit UI has no automated tests, tasks that cross midnight display without a "next day" marker, and the greedy scheduler can pick a worse plan than the best possible one.
 
 ## 📐 Smarter Scheduling
-
-> Fill in once you've implemented scheduling logic.
 
 | Feature | Method(s) | Notes |
 |---------|-----------|-------|

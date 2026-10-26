@@ -35,6 +35,7 @@ classDiagram
         +int preferred_time
         +date due_date
         +str pet_name
+        +int preferred_end
         +mark_complete() Task
         +priority_value() int
     }
@@ -55,10 +56,16 @@ classDiagram
 
     class Scheduler {
         +Owner owner
-        +generate_plan(plan_date) DailyPlan
-        +sort_by_time(tasks) list~Task~
+        +sort_by_time(tasks)$ list~Task~
         +detect_conflicts(plan_date) list~str~
+        +generate_plan(plan_date) DailyPlan
         +explain_plan(plan) str
+        -_is_pending(task, plan_date) bool
+        -_overlaps(first, second)$ bool
+        -_describe_conflict(first, second)$ str
+        -_choose_start(plan, task, buffer) tuple
+        -_is_free(plan, start, task, buffer) bool
+        -_earliest_free_start(plan, task, buffer) int
     }
 
     class DailyPlan {
@@ -82,15 +89,26 @@ classDiagram
         +str reason
     }
 
+    class StreamlitApp {
+        <<app.py>>
+    }
+
     Owner "1" *-- "0..*" Pet : has
-    Owner *-- Preferences
+    Owner *-- Preferences : has
     Pet "1" *-- "0..*" Task : has
     Task --> Priority
     Task --> Frequency
     Task ..> Pet : pet_name refers to
-    Scheduler --> Owner : reads from
+    Task ..> Task : mark_complete creates next occurrence
+    Pet ..> Task : complete_task adds next occurrence
+    Scheduler --> Owner : reads tasks via get_all_tasks
     Scheduler ..> DailyPlan : creates
     DailyPlan *-- "0..*" ScheduledItem
     DailyPlan *-- "0..*" SkippedItem
     ScheduledItem --> Task
     SkippedItem --> Task
+    StreamlitApp ..> Owner : keeps in session_state
+    StreamlitApp ..> Scheduler : sorts, detects conflicts, generates plan
+
+    note for Task "preferred_time and preferred_end are minutes since midnight, or None if the task has no preferred time. Task and Pet compare by identity (eq=False)."
+    note for Scheduler "Greedy: priority, then shorter duration, then pet order. Conflicts are reported as warnings, never raised."

@@ -16,33 +16,20 @@ st.title("🐾 PawPal+")
 
 st.markdown(
     """
-Welcome to the PawPal+ starter app.
-
-This file is intentionally thin. It gives you a working Streamlit app so you can start quickly,
-but **it does not implement the project logic**. Your job is to design the system and build it.
-
-Use this app as your interactive demo once your backend classes/functions exist.
+Plan your pets' care for the day. Add your pets and their tasks, check for time
+conflicts, and let PawPal+ build a schedule that fits the time you have.
 """
 )
 
-with st.expander("Scenario", expanded=True):
+with st.expander("How PawPal+ works", expanded=False):
     st.markdown(
         """
-**PawPal+** is a pet care planning assistant. It helps a pet owner plan care tasks
-for their pet(s) based on constraints like time, priority, and preferences.
-
-You will design and implement the scheduling logic and connect it to this Streamlit UI.
-"""
-    )
-
-with st.expander("What you need to build", expanded=True):
-    st.markdown(
-        """
-At minimum, your system should:
-- Represent pet care tasks (what needs to happen, how long it takes, priority)
-- Represent the pet and the owner (basic info and preferences)
-- Build a plan/schedule for a day that chooses and orders tasks based on constraints
-- Explain the plan (why each task was chosen and when it happens)
+1. Enter how many minutes you have today and add your pets.
+2. Give each pet tasks with a duration, priority, how often it repeats, and an optional preferred time.
+3. Tasks are listed in time order, and you'll get a warning if two tasks' preferred times overlap.
+4. **Generate schedule** picks high-priority tasks first, places each at its preferred time when it's free,
+   and explains why each task was scheduled or left out.
+5. Completing a daily or weekly task automatically creates the next one.
 """
     )
 
