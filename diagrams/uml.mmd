@@ -8,6 +8,7 @@ classDiagram
         +add_pet(pet) None
         +remove_pet(pet) None
         +get_all_tasks() list~Task~
+        +filter_tasks(pet_name, completed) list~Task~
     }
 
     class Preferences {
@@ -21,6 +22,7 @@ classDiagram
         +add_task(task) None
         +edit_task(task, **changes) None
         +remove_task(task) None
+        +complete_task(task) Task
     }
 
     class Task {
@@ -31,8 +33,9 @@ classDiagram
         +Frequency frequency
         +bool completed
         +int preferred_time
+        +date due_date
         +str pet_name
-        +mark_complete() None
+        +mark_complete() Task
         +priority_value() int
     }
 
@@ -52,7 +55,9 @@ classDiagram
 
     class Scheduler {
         +Owner owner
-        +generate_plan() DailyPlan
+        +generate_plan(plan_date) DailyPlan
+        +sort_by_time(tasks) list~Task~
+        +detect_conflicts(plan_date) list~str~
         +explain_plan(plan) str
     }
 

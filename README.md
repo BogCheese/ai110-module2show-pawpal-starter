@@ -109,10 +109,26 @@ Sample test output:
 
 | Feature | Method(s) | Notes |
 |---------|-----------|-------|
-| Task sorting | | e.g., by priority, duration |
-| Filtering | | e.g., skip tasks if time runs out |
-| Conflict handling | | e.g., overlapping time slots |
-| Recurring tasks | | e.g., daily vs. weekly |
+| Task sorting | `Scheduler.sort_by_time()` | Orders tasks by preferred time; tasks with no time go last. |
+| Filtering | `Owner.filter_tasks()` | Filters by pet name and/or completion status. |
+| Conflict handling | `Scheduler.detect_conflicts()` | Warns when two tasks' preferred times overlap. |
+| Recurring tasks | `Task.mark_complete()`, `Pet.complete_task()` | Completing a daily or weekly task creates the next one. |
+
+### Sorting
+
+`Scheduler.sort_by_time(tasks)` returns a new list ordered by `preferred_time` (stored as minutes since midnight), earliest first. Tasks without a preferred time go at the end, and the original list is not changed. Separately, `Scheduler.generate_plan()` orders tasks by priority (high first), then shorter duration, then pet order, and the finished `DailyPlan` is always listed by start time.
+
+### Filtering
+
+`Owner.filter_tasks(pet_name=None, completed=None)` returns the tasks that match. Leave a filter as `None` to ignore it, or give both to require both. For example, `owner.filter_tasks(pet_name="Mia", completed=False)` returns Mia's unfinished tasks.
+
+### Conflict detection
+
+`Scheduler.detect_conflicts()` looks at every pair of pending tasks (due today or earlier, and not completed) that have a preferred time, across all pets. Two tasks conflict when each starts before the other ends, so identical times and partial overlaps are both caught, while back-to-back tasks are fine. It returns a list of warning messages (empty if there are none) and never raises an error or changes any task. When `generate_plan()` later builds the schedule, it resolves a clash by keeping the higher-priority task at its time and moving the other to the earliest free slot.
+
+### Recurring tasks
+
+Each `Task` has a `frequency` (`ONCE`, `DAILY`, or `WEEKLY`) and a `due_date`. `Task.mark_complete()` marks the task done and, for a repeating task, returns a copy that is not completed and is due today + 1 day (daily) or today + 7 days (weekly), calculated with `timedelta`. `Pet.complete_task(task)` calls it and adds the new task to the pet. `generate_plan()` only includes tasks due on or before the plan date, so tomorrow's copy stays out of today's schedule.
 
 ## 📸 Demo Walkthrough
 

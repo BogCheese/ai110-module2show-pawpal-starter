@@ -51,6 +51,10 @@ After an AI review of my class skeleton, I changed the following:
 - Describe one tradeoff your scheduler makes.
 - Why is that tradeoff reasonable for this scenario?
 
+My scheduler is greedy: it sorts tasks by priority (then shorter duration) and takes each one if it still fits in the owner's remaining minutes. It never tries other combinations, so it can pick a worse overall plan. For example, with 60 minutes available, one 50-minute high-priority task gets scheduled and three 20-minute medium-priority tasks are skipped, even though the three smaller tasks together might matter more to the owner. Finding the best combination is a harder "knapsack" problem.
+
+This is reasonable for PawPal+ because an owner has only a handful of tasks, high-priority care like medication should always win, and a greedy plan is easy to explain ("this was high priority, so it went first"). I made the same kind of choice when reviewing `detect_conflicts()`. A faster version that stops comparing once tasks no longer overlap exists, but I kept the simple "compare every pair" loop and only moved the overlap rule and the message into small named helpers, because readability matters more than speed for a few tasks. A related limit is that conflict detection only checks preferred times, and the scheduler resolves a clash by quietly moving the lower-priority task to the earliest free slot instead of asking the owner.
+
 ---
 
 ## 3. AI Collaboration

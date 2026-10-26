@@ -11,8 +11,10 @@ be compared and added together without parsing strings. Use format_time() to
 turn one back into text for display.
 """
 
-from dataclasses import dataclass, field, fields
+from dataclasses import dataclass, field, fields, replace
+from datetime import date, timedelta
 from enum import Enum
+from itertools import combinations
 from uuid import uuid4
 
 
@@ -39,6 +41,10 @@ class Frequency(Enum):
     WEEKLY = "weekly"
 
 
+# How many days later a repeating task is due again. ONCE is missing on purpose.
+RECURRENCE_DAYS = {Frequency.DAILY: 1, Frequency.WEEKLY: 7}
+
+
 # eq=False: two tasks are only "the same" if they are the same object, so two
 # identical-looking tasks can be told apart and a Task can be used in a set/dict.
 @dataclass(eq=False)
@@ -51,12 +57,39 @@ class Task:
     frequency: Frequency = Frequency.ONCE
     completed: bool = False
     preferred_time: int | None = None  # minutes since midnight; None = no preference
+    due_date: date = field(default_factory=date.today)  # the day this task needs doing
     pet_name: str = ""  # set by Pet.add_task so a plan can say which pet a task is for
     id: str = field(default_factory=lambda: uuid4().hex)
 
-    def mark_complete(self) -> None:
-        """Mark this task as done."""
+    @property
+    def preferred_end(self) -> int | None:
+        """When the task would finish if started at its preferred time (None if it has none)."""
+        if self.preferred_time is None:
+            return None
+        return self.preferred_time + self.duration_minutes
+
+    def mark_complete(self) -> "Task | None":
+        """Mark this task done and return the next occurrence if it repeats (else None).
+
+        A DAILY task's next occurrence is due today + 1 day and a WEEKLY task's is due
+        today + 7 days. The returned task is a copy that is not completed and has a new id.
+        It is not stored anywhere; use Pet.complete_task() to add it to the pet.
+        """
         self.completed = True
+
+        days_until_next = RECURRENCE_DAYS.get(self.frequency)
+        if days_until_next is None:
+            return None
+
+        # Count from today (not the old due date) so a task finished late is never
+        # handed a due date that is already in the past.
+        # Copy this task for its next due date: not completed, with a fresh id.
+        return replace(
+            self,
+            completed=False,
+            due_date=date.today() + timedelta(days=days_until_next),
+            id=uuid4().hex,
+        )
 
     def priority_value(self) -> int:
         """Return the priority as a number so tasks can be sorted."""
@@ -100,6 +133,20 @@ class Pet:
         """Remove a care task from this pet (raises ValueError if it isn't here)."""
         self.tasks.remove(task)
 
+    def complete_task(self, task: Task) -> Task | None:
+        """Mark a task done and, if it repeats, add its next occurrence to this pet.
+
+        Returns the new task, or None for a one-time task. Raises ValueError if the
+        task does not belong to this pet.
+        """
+        if task not in self.tasks:
+            raise ValueError(f"{task.title!r} is not one of {self.name}'s tasks")
+
+        next_task = task.mark_complete()
+        if next_task is not None:
+            self.add_task(next_task)
+        return next_task
+
 
 @dataclass
 class Preferences:
@@ -129,6 +176,19 @@ class Owner:
     def get_all_tasks(self) -> list[Task]:
         """Return every task across all of this owner's pets, in pet order."""
         return [task for pet in self.pets for task in pet.tasks]
+
+    def filter_tasks(self, pet_name: str | None = None, completed: bool | None = None) -> list[Task]:
+        """Return tasks matching the given pet name and/or completed status.
+
+        Pass None for a filter to ignore it. With both given, a task must match both.
+        Example: filter_tasks(pet_name="Mia", completed=False) is Mia's unfinished tasks.
+        """
+        matching = self.get_all_tasks()
+        if pet_name is not None:
+            matching = [task for task in matching if task.pet_name == pet_name]
+        if completed is not None:
+            matching = [task for task in matching if task.completed == completed]
+        return matching
 
 
 @dataclass
@@ -203,11 +263,56 @@ class Scheduler:
         """Create a scheduler that plans for the given owner and all of their pets."""
         self.owner = owner
 
-    def generate_plan(self) -> DailyPlan:
+    @staticmethod
+    def sort_by_time(tasks: list[Task]) -> list[Task]:
+        """Return a new list of tasks ordered by preferred time, earliest first.
+
+        Tasks with no preferred time go at the end. Tasks with the same time keep
+        their original relative order. The list passed in is not changed.
+        """
+        return sorted(tasks, key=lambda task: (task.preferred_time is None, task.preferred_time or 0))
+
+    def detect_conflicts(self, plan_date: date | None = None) -> list[str]:
+        """Return a warning for every pair of pending tasks whose preferred times overlap.
+
+        This only reports problems, it never changes anything. The scheduler later
+        resolves a conflict by moving one task to the next free slot.
+        """
+        plan_date = plan_date or date.today()
+        timed_tasks = [
+            task
+            for task in self.owner.get_all_tasks()
+            if task.preferred_time is not None and self._is_pending(task, plan_date)
+        ]
+
+        # Compare every pair once. Simple and fine for the handful of tasks one owner has.
+        return [
+            self._describe_conflict(first, second)
+            for first, second in combinations(self.sort_by_time(timed_tasks), 2)
+            if self._overlaps(first, second)
+        ]
+
+    @staticmethod
+    def _overlaps(first: Task, second: Task) -> bool:
+        """True if two tasks' preferred time ranges overlap (touching end to start is fine)."""
+        return first.preferred_time < second.preferred_end and second.preferred_time < first.preferred_end
+
+    @staticmethod
+    def _describe_conflict(first: Task, second: Task) -> str:
+        """Build the warning message for two conflicting tasks."""
+
+        def describe(task: Task) -> str:
+            times = f"{format_time(task.preferred_time)}-{format_time(task.preferred_end)}"
+            return f"{task.title} ({task.pet_name}, {times})"
+
+        return f"Conflict: {describe(first)} overlaps {describe(second)}"
+
+    def generate_plan(self, plan_date: date | None = None) -> DailyPlan:
         """Choose and order tasks that fit within the owner's available time.
 
         Rules:
         - Tasks come from owner.get_all_tasks(), so every pet is included.
+        - Only tasks due on or before plan_date (default: today) are considered.
         - Tasks that are already completed are skipped.
         - Greedy: take tasks by priority (high first), then shorter duration,
           then pet order, so the result is repeatable. Tradeoff: one long
@@ -216,13 +321,16 @@ class Scheduler:
           otherwise it goes in the earliest free slot after owner.day_start_minute.
         - Every task ends up either scheduled or skipped, each with a reason.
         """
+        plan_date = plan_date or date.today()
         plan = DailyPlan()
         buffer = self.owner.preferences.buffer_minutes
         minutes_left = self.owner.available_minutes
 
-        # Step 1: set aside tasks that are already done.
+        # Step 1: ignore tasks not due yet and set aside tasks that are already done.
         to_schedule = []
         for task in self.owner.get_all_tasks():
+            if task.due_date > plan_date:
+                continue
             if task.completed:
                 plan.skip(task, "already completed")
             else:
@@ -257,6 +365,10 @@ class Scheduler:
         for skipped in plan.skipped_items:
             lines.append(f"- {skipped.task.title} (skipped): {skipped.reason}")
         return "\n".join(lines)
+
+    def _is_pending(self, task: Task, plan_date: date) -> bool:
+        """True if the task is due on or before plan_date and not yet completed."""
+        return task.due_date <= plan_date and not task.completed
 
     def _choose_start(self, plan: DailyPlan, task: Task, buffer: int) -> tuple[int, str]:
         """Pick a start time for the task and describe how it was chosen."""
