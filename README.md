@@ -103,6 +103,40 @@ Sample test output:
 # Paste your pytest output here
 ```
 
+Run the tests with:
+
+```bash
+python -m pytest
+```
+
+The 26 tests in `tests/test_pawpal.py` cover:
+
+- **Basics:** marking a task complete, adding a task to a pet, and editing a task (unknown fields and `id` are rejected).
+- **Sorting:** tasks come back in time order with untimed tasks last, equal times keep their order, and an empty list or the original list is left unchanged.
+- **Filtering:** by pet, by completion status, and by both, plus an unknown pet returning nothing.
+- **Recurring tasks:** a daily task creates a copy due tomorrow, a weekly task one due in 7 days, a one-time task creates nothing, a late completion is still due tomorrow, and completing the same task twice doesn't duplicate it.
+- **Conflict detection:** same-time and overlapping tasks (same pet and different pets) are flagged, back-to-back, completed, and untimed tasks are not, and three tasks at one time give three warnings.
+- **Scheduling:** priority order, skipping tasks that don't fit or are already completed, ignoring tasks not due yet, moving a clashing task to the next free slot, and empty cases (no pets, a pet with no tasks).
+
+Output of a successful run:
+
+```
+============================= test session starts =============================
+platform win32 -- Python 3.13.15, pytest-9.1.1, pluggy-1.7.0
+rootdir: C:\Users\Brand\Desktop\Codepath A110\ai110-module2show-pawpal-starter
+configfile: pytest.ini
+plugins: anyio-4.15.1
+collected 26 items
+
+tests\test_pawpal.py ..........................                          [100%]
+
+============================= 26 passed in 0.08s ==============================
+```
+
+**Confidence Level: ★★★★☆ (4 out of 5)**
+
+All 26 tests pass, and they cover the main behaviors and the edge cases I could think of, including one real bug found and fixed (completing a recurring task twice). I'm not giving 5 stars because month and year rollover for recurring dates isn't tested, the Streamlit UI has no automated tests, tasks that cross midnight display without a "next day" marker, and the greedy scheduler can pick a worse plan than the best possible one.
+
 ## 📐 Smarter Scheduling
 
 > Fill in once you've implemented scheduling logic.

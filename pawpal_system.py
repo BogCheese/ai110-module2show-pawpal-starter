@@ -136,11 +136,14 @@ class Pet:
     def complete_task(self, task: Task) -> Task | None:
         """Mark a task done and, if it repeats, add its next occurrence to this pet.
 
-        Returns the new task, or None for a one-time task. Raises ValueError if the
-        task does not belong to this pet.
+        Returns the new task, or None for a one-time task or a task that was already
+        completed (so a double click can't create duplicates). Raises ValueError if
+        the task does not belong to this pet.
         """
         if task not in self.tasks:
             raise ValueError(f"{task.title!r} is not one of {self.name}'s tasks")
+        if task.completed:
+            return None
 
         next_task = task.mark_complete()
         if next_task is not None:
