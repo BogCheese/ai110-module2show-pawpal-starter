@@ -1,0 +1,114 @@
+classDiagram
+    class Owner {
+        +str name
+        +int available_minutes
+        +int day_start_minute
+        +Preferences preferences
+        +list~Pet~ pets
+        +add_pet(pet) None
+        +remove_pet(pet) None
+        +get_all_tasks() list~Task~
+        +filter_tasks(pet_name, completed) list~Task~
+    }
+
+    class Preferences {
+        +int buffer_minutes
+    }
+
+    class Pet {
+        +str name
+        +str species
+        +list~Task~ tasks
+        +add_task(task) None
+        +edit_task(task, **changes) None
+        +remove_task(task) None
+        +complete_task(task) Task
+    }
+
+    class Task {
+        +str id
+        +str title
+        +int duration_minutes
+        +Priority priority
+        +Frequency frequency
+        +bool completed
+        +int preferred_time
+        +date due_date
+        +str pet_name
+        +int preferred_end
+        +mark_complete() Task
+        +priority_value() int
+    }
+
+    class Priority {
+        <<enumeration>>
+        LOW
+        MEDIUM
+        HIGH
+    }
+
+    class Frequency {
+        <<enumeration>>
+        ONCE
+        DAILY
+        WEEKLY
+    }
+
+    class Scheduler {
+        +Owner owner
+        +sort_by_time(tasks)$ list~Task~
+        +detect_conflicts(plan_date) list~str~
+        +generate_plan(plan_date) DailyPlan
+        +explain_plan(plan) str
+        -_is_pending(task, plan_date) bool
+        -_overlaps(first, second)$ bool
+        -_describe_conflict(first, second)$ str
+        -_choose_start(plan, task, buffer) tuple
+        -_is_free(plan, start, task, buffer) bool
+        -_earliest_free_start(plan, task, buffer) int
+    }
+
+    class DailyPlan {
+        +list~ScheduledItem~ scheduled_items
+        +list~SkippedItem~ skipped_items
+        +int total_minutes
+        +add_item(task, start_minute, reason) None
+        +skip(task, reason) None
+        +display() str
+    }
+
+    class ScheduledItem {
+        +Task task
+        +int start_minute
+        +str reason
+        +int end_minute
+    }
+
+    class SkippedItem {
+        +Task task
+        +str reason
+    }
+
+    class StreamlitApp {
+        <<app.py>>
+    }
+
+    Owner "1" *-- "0..*" Pet : has
+    Owner *-- Preferences : has
+    Pet "1" *-- "0..*" Task : has
+    Task --> Priority
+    Task --> Frequency
+    Task ..> Pet : pet_name refers to
+    Task ..> Task : mark_complete creates next occurrence
+    Pet ..> Task : complete_task adds next occurrence
+    Scheduler --> Owner : reads tasks via get_all_tasks
+    Scheduler ..> DailyPlan : creates
+    DailyPlan *-- "0..*" ScheduledItem
+    DailyPlan *-- "0..*" SkippedItem
+    ScheduledItem --> Task
+    SkippedItem --> Task
+    StreamlitApp ..> Owner : keeps in session_state
+    StreamlitApp ..> Scheduler : sorts, detects conflicts, generates plan
+
+    note for Task "preferred_time and preferred_end are minutes since midnight, or None if the task has no preferred time. Task and Pet compare by identity (eq=False)."
+    note for Scheduler "Greedy: priority, then shorter duration, then pet order. Conflicts are reported as warnings, never raised."
