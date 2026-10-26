@@ -60,10 +60,16 @@ After an AI review of my class skeleton, I changed the following:
 - How did you use AI tools during this project (for example: design brainstorming, debugging, refactoring)?
 - What kinds of prompts or questions were most helpful?
 
+I used AI to turn my UML into dataclass skeletons, to review that skeleton for missing relationships and logic problems, to implement the four core classes, and to write `main.py` and the first two pytest tests. The most helpful prompt was asking it to review my skeleton for "missing relationships or potential logic bottlenecks", because it caught problems before any scheduling code existed (no link from a task back to its pet, string times that can't be compared, and two tasks that look identical being treated as the same task).
+
 **b. Judgment and verification**
 
 - Describe one moment where you did not accept an AI suggestion as-is.
 - How did you evaluate or verify what the AI suggested?
+
+The AI's review gave 13 suggestions. I accepted the ones that fixed real problems (task-to-pet link, unique task identity, numeric times, a `Priority` enum, computed `total_minutes`, validated `edit_task`), but the AI did not fully act on two of them: tasks that repeat daily only got a stored `frequency` field and don't change scheduling yet, and `Preferences` only has a placeholder `buffer_minutes` that the AI chose without asking me. I also told the AI to keep the questions in this file and to keep the README placeholder text instead of letting it rewrite them.
+
+To verify, I ran `python main.py` and read the schedule against what I expected (two pets, tasks at their preferred times, the explanation matching the plan). In an earlier test run, two tasks wanted 9:00 AM and the shorter one won, which matched my tie-break rule but is something I would want to confirm is the behavior I want. I then added two pytest tests (`mark_complete()` changes status, adding a task increases a pet's task count) and ran `python -m pytest`, which passed.
 
 ---
 

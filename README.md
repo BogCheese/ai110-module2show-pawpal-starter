@@ -42,6 +42,18 @@ pip install -r requirements.txt
 6. Connect your logic to the Streamlit UI in `app.py`.
 7. Refine UML so it matches what you actually built.
 
+## Implementation Summary
+
+The logic lives in `pawpal_system.py` and can be tried from the terminal with `python main.py`.
+
+- **`Task`**: one care activity (title, duration, priority, frequency, optional preferred time, completion status).
+- **`Pet`**: a pet and its list of tasks. It adds, edits, and removes its own tasks.
+- **`Owner`**: has the available minutes for the day and a list of pets. `get_all_tasks()` returns every pet's tasks together.
+- **`Scheduler`**: the "brain". `generate_plan()` reads tasks from `Owner.get_all_tasks()` (so all pets are covered), skips completed tasks, orders the rest by priority then duration, and places each one at its preferred time if free or in the earliest free slot until the owner's time runs out.
+- **`DailyPlan`**: the result. It holds the scheduled items (with start times and reasons) and the skipped items (with reasons), and `display()` prints it.
+
+How they work together: `Owner` → `Pet` → `Task` hold the data, `Scheduler` reads from the `Owner` and creates a `DailyPlan`. See [diagrams/uml.mmd](diagrams/uml.mmd) for the full class diagram.
+
 ## 🖥️ Sample Output
 
 Paste a sample of your app's CLI or Streamlit output here so a reader can see what a generated plan looks like:
@@ -52,6 +64,27 @@ Paste a sample of your app's CLI or Streamlit output here so a reader can see wh
 #   08:00 — Morning walk (30 min) [priority: high]
 #   09:00 — Feeding (10 min) [priority: high]
 #   ...
+```
+
+Output from running `python main.py`, which builds an owner with two pets and four tasks and prints the generated schedule:
+
+```
+Owner: Jordan (120 minutes available)
+Pets: Buddy, Mia
+
+Today's Schedule
+----------------
+7:00 AM - 7:30 AM  Morning walk (Buddy)
+8:00 AM - 8:05 AM  Give medication (Mia)
+12:00 PM - 12:20 PM  Play with laser (Mia)
+6:00 PM - 6:15 PM  Brush coat (Buddy)
+Total: 70 minutes
+
+Why this plan:
+- Morning walk: high priority, placed at its preferred time 7:00 AM
+- Give medication: high priority, placed at its preferred time 8:00 AM
+- Play with laser: medium priority, placed at its preferred time 12:00 PM
+- Brush coat: low priority, placed at its preferred time 6:00 PM
 ```
 
 ## 🧪 Testing PawPal+

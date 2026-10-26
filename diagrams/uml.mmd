@@ -28,6 +28,7 @@ classDiagram
         +str title
         +int duration_minutes
         +Priority priority
+        +Frequency frequency
         +bool completed
         +int preferred_time
         +str pet_name
@@ -40,6 +41,13 @@ classDiagram
         LOW
         MEDIUM
         HIGH
+    }
+
+    class Frequency {
+        <<enumeration>>
+        ONCE
+        DAILY
+        WEEKLY
     }
 
     class Scheduler {
@@ -73,6 +81,7 @@ classDiagram
     Owner *-- Preferences
     Pet "1" *-- "0..*" Task : has
     Task --> Priority
+    Task --> Frequency
     Task ..> Pet : pet_name refers to
     Scheduler --> Owner : reads from
     Scheduler ..> DailyPlan : creates
